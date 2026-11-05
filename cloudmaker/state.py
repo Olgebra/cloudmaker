@@ -61,3 +61,9 @@ class StateStore:
             data["vms"].pop(name, None)
             self._dump(data)
 
+    def clear_vms(self) -> None:
+        with self._lock:
+            data = self._load()
+            data["vms"] = {}
+            self._dump(data)
+

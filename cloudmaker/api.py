@@ -117,3 +117,21 @@ def delete_vm(name: str) -> dict:
     state.delete_vm(name)
     return {"deleted": name}
 
+
+@router.delete("/admin/wipe")
+def admin_wipe() -> dict:
+    """Временный полный сброс всех ВМ.
+
+    Небезопасно: нет аутентификации. Эндпоинт нужно удалить.
+    """
+    removed: list[str] = []
+    for vm in state.list_vms():
+        try:
+            backend.delete_vm(vm["name"])
+        except BackendError:
+            pass
+        backend.remove_disk(vm.get("disk_path") or "")
+        removed.append(vm["name"])
+    state.clear_vms()
+    return {"wiped": removed}
+
