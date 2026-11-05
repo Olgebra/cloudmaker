@@ -3,8 +3,10 @@
 from fastapi import FastAPI
 
 from cloudmaker import __version__
+from cloudmaker.api import router
 
 app = FastAPI(title="CloudMaker", version=__version__)
+app.include_router(router)
 
 
 @app.get("/health")

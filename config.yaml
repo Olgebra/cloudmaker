@@ -7,6 +7,7 @@ storage:
   images_dir: ./data/images
   disks_dir: ./data/disks
   xml_dir: ./data/xml
+  state_file: ./data/state.json
 
 vm:
   vcpus: 1
