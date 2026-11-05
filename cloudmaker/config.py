@@ -25,10 +25,16 @@ class VmDefaults(BaseModel):
     disk_gb: int = 4
 
 
+class VirtualBoxConfig(BaseModel):
+    vm_folder: str = "./data/vbox"
+
+
 class Settings(BaseModel):
+    backend: str = "libvirt"
     libvirt: LibvirtConfig = Field(default_factory=LibvirtConfig)
     storage: StorageConfig = Field(default_factory=StorageConfig)
     vm: VmDefaults = Field(default_factory=VmDefaults)
+    virtualbox: VirtualBoxConfig = Field(default_factory=VirtualBoxConfig)
 
 
 def load_settings(path: str | None = None) -> Settings:

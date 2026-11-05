@@ -1,6 +1,8 @@
 # Пример конфигурации CloudMaker.
 # Скопируйте в config.yaml и поправьте пути при необходимости.
 
+backend: virtualbox
+
 libvirt:
   uri: qemu:///system
 
@@ -13,3 +15,6 @@ vm:
   vcpus: 1
   memory_mb: 512
   disk_gb: 4
+
+virtualbox:
+  vm_folder: ./data/vbox
