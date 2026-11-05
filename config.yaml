@@ -1,7 +1,5 @@
 # Локальная конфигурация CloudMaker.
 
-backend: virtualbox
-
 libvirt:
   uri: qemu:///system
 
@@ -14,6 +12,3 @@ vm:
   vcpus: 1
   memory_mb: 512
   disk_gb: 4
-
-virtualbox:
-  vm_folder: ./data/vbox
