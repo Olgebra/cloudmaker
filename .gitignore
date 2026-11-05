@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+data/disks/
+data/seeds/
+data/xml/
+data/vbox/
+*.qcow2
+*.iso
