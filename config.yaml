@@ -1,0 +1,14 @@
+# Локальная конфигурация CloudMaker.
+
+libvirt:
+  uri: qemu:///system
+
+storage:
+  images_dir: ./data/images
+  disks_dir: ./data/disks
+  xml_dir: ./data/xml
+
+vm:
+  vcpus: 1
+  memory_mb: 512
+  disk_gb: 4
