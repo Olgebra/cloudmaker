@@ -18,6 +18,7 @@ class StorageConfig(BaseModel):
     disks_dir: str = "./data/disks"
     xml_dir: str = "./data/xml"
     state_file: str = "./data/state.json"
+    seed_dir: str = "./data/seeds"
 
 
 class VmDefaults(BaseModel):

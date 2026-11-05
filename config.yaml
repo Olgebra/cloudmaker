@@ -8,6 +8,7 @@ storage:
   disks_dir: ./data/disks
   xml_dir: ./data/xml
   state_file: ./data/state.json
+  seed_dir: ./data/seeds
 
 vm:
   vcpus: 1

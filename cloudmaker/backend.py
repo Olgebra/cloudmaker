@@ -91,10 +91,12 @@ class LibvirtBackend:
         memory_mb: int,
         vcpus: int,
         disk_path: Path,
+        network: str = "default",
+        seed_iso: Path | None = None,
     ) -> str:
         disk = escape(str(disk_path))
         vm = escape(name)
-        nic_network = escape("default")
+        nic_network = escape(network or "default")
         lines = [
             "<domain type='kvm'>",
             "  <name>" + vm + "</name>",
@@ -119,6 +121,18 @@ class LibvirtBackend:
             "      <target dev='vda' bus='virtio'/>",
             '    </disk>',
         ]
+        if seed_iso is not None:
+            iso = escape(str(seed_iso))
+            lines.extend(
+                [
+                    "    <disk type='file' device='cdrom'>",
+                    "      <driver name='qemu' type='raw'/>",
+                    "      <source file='" + iso + "'/>",
+                    "      <target dev='hdc' bus='ide'/>",
+                    "      <readonly/>",
+                    "    </disk>",
+                ]
+            )
         lines.extend(
             [
                 "    <interface type='network'>",
@@ -144,8 +158,17 @@ class LibvirtBackend:
         memory_mb: int,
         vcpus: int,
         disk_path: Path,
+        network: str = "default",
+        seed_iso: Path | None = None,
     ) -> None:
-        xml = self.render_domain_xml(name, memory_mb, vcpus, disk_path)
+        xml = self.render_domain_xml(
+            name,
+            memory_mb,
+            vcpus,
+            disk_path,
+            network=network,
+            seed_iso=seed_iso,
+        )
         xml_path = self.xml_dir / (name + ".xml")
         xml_path.write_text(xml, encoding="utf-8")
         try:
