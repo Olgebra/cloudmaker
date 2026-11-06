@@ -8,3 +8,6 @@ data/xml/
 data/vbox/
 *.qcow2
 *.iso
+data/images/*
+!data/images/.gitkeep
+*.img
