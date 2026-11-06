@@ -18,6 +18,7 @@ class StateStore:
 
     def _empty(self) -> dict[str, Any]:
         data: dict[str, Any] = {"vms": {}}
+        data["images"] = {}
         return data
 
     def _load(self) -> dict[str, Any]:
@@ -28,6 +29,9 @@ class StateStore:
         vms = data.get("vms")
         if not isinstance(vms, dict):
             data["vms"] = {}
+        images = data.get("images")
+        if not isinstance(images, dict):
+            data["images"] = {}
         return data
 
     def _dump(self, data: dict[str, Any]) -> None:
@@ -59,5 +63,28 @@ class StateStore:
         with self._lock:
             data = self._load()
             data["vms"].pop(name, None)
+            self._dump(data)
+
+    def list_images(self) -> list[dict[str, Any]]:
+        with self._lock:
+            return [dict(image) for image in self._load()["images"].values()]
+
+    def get_image(self, name: str) -> dict[str, Any] | None:
+        with self._lock:
+            image = self._load()["images"].get(name)
+            if image is None:
+                return None
+            return dict(image)
+
+    def save_image(self, image: dict[str, Any]) -> None:
+        with self._lock:
+            data = self._load()
+            data["images"][image["name"]] = image
+            self._dump(data)
+
+    def delete_image(self, name: str) -> None:
+        with self._lock:
+            data = self._load()
+            data["images"].pop(name, None)
             self._dump(data)
 

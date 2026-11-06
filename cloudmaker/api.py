@@ -14,6 +14,14 @@ from cloudmaker.config import load_settings
 from cloudmaker.state import StateStore
 from cloudmaker.cloudinit import CloudInitError, build_seed_iso, render_user_data
 from cloudmaker.network import NetworkError, ensure_network
+from cloudmaker.images import (
+    ImageError,
+    delete_image,
+    get_image,
+    image_in_use,
+    list_images,
+    register_image,
+)
 
 NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]{0,31}$")
 HOSTNAME_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$")
@@ -30,10 +38,7 @@ backend = LibvirtBackend(
 
 class VmCreate(BaseModel):
     name: str = Field(pattern=r"^[A-Za-z][A-Za-z0-9_-]{0,31}$")
-    image_path: str | None = Field(
-        default=None,
-        description="Путь к базовому qcow2, если нужен backing file",
-    )
+    image: str = Field(description="Имя образа из реестра")
     vcpus: int | None = None
     memory_mb: int | None = None
     disk_gb: int | None = None
@@ -44,6 +49,12 @@ class VmCreate(BaseModel):
         description="Дополнительный cloud-config или скрипт user-data",
     )
     network: str | None = Field(default=None, description="Имя виртуальной сети libvirt")
+
+
+class ImageCreate(BaseModel):
+    name: str = Field(pattern=r"^[A-Za-z][A-Za-z0-9_-]{0,31}$")
+    path: str = Field(description="Путь к файлу образа на хосте")
+    description: str = ""
 
 
 def _sizes(body: VmCreate) -> tuple[int, int, int]:
@@ -99,7 +110,10 @@ def create_vm(body: VmCreate) -> dict:
     network_name = body.network or settings.network.name
     if not NAME_RE.match(network_name):
         raise HTTPException(status_code=400, detail="Некорректное имя сети")
-    base = body.image_path or None
+    try:
+        image = get_image(state, body.image)
+    except ImageError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
     disk_path: Path | None = None
     try:
@@ -111,7 +125,7 @@ def create_vm(body: VmCreate) -> dict:
                 settings.network.gateway,
                 settings.network.cidr,
             )
-        disk_path = backend.create_disk(body.name, disk_gb, base_image=base)
+        disk_path = backend.create_disk(body.name, disk_gb, base_image=image["path"])
         seed_iso = build_seed_iso(
             body.name,
             hostname,
@@ -142,7 +156,7 @@ def create_vm(body: VmCreate) -> dict:
         "disk_gb": disk_gb,
         "disk_path": str(disk_path),
     }
-    vm["image_path"] = base
+    vm["image"] = body.image
     vm["hostname"] = hostname
     vm["network"] = network_name
     state.save_vm(vm)
@@ -190,4 +204,31 @@ def list_networks() -> dict:
             }
         ]
     }
+
+
+@router.post("/images", status_code=201)
+def create_image(body: ImageCreate) -> dict:
+    try:
+        return register_image(state, body.name, body.path, body.description)
+    except ImageError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+@router.get("/images")
+def get_images() -> dict:
+    return {"images": list_images(state)}
+
+
+@router.delete("/images/{name}")
+def remove_image(name: str) -> dict:
+    if image_in_use(state, name):
+        raise HTTPException(
+            status_code=409,
+            detail="Образ используется виртуальной машиной",
+        )
+    try:
+        delete_image(state, name)
+    except ImageError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return {"deleted": name}
 
