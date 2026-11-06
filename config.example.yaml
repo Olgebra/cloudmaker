@@ -18,6 +18,6 @@ vm:
 
 network:
   name: cloudmaker
-  bridge: br-cloudmaker
+  bridge: br-cloudmaker-typo
   cidr: 192.168.100.0/24
   gateway: 192.168.100.1
