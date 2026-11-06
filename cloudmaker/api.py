@@ -13,6 +13,7 @@ from cloudmaker.backend import BackendError, LibvirtBackend
 from cloudmaker.config import load_settings
 from cloudmaker.state import StateStore
 from cloudmaker.cloudinit import CloudInitError, build_seed_iso, render_user_data
+from cloudmaker.network import NetworkError, ensure_network
 
 NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]{0,31}$")
 HOSTNAME_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$")
@@ -94,10 +95,21 @@ def create_vm(body: VmCreate) -> dict:
         render_user_data(hostname, body.ssh_key, body.user_data)
     except CloudInitError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    network_name = settings.network.name
+    if not NAME_RE.match(network_name):
+        raise HTTPException(status_code=400, detail="Некорректное имя сети")
     base = body.image_path or None
 
     disk_path: Path | None = None
     try:
+        if network_name == settings.network.name:
+            ensure_network(
+                settings.libvirt.uri,
+                settings.network.name,
+                settings.network.bridge,
+                settings.network.gateway,
+                settings.network.cidr,
+            )
         disk_path = backend.create_disk(body.name, disk_gb, base_image=base)
         seed_iso = build_seed_iso(
             body.name,
@@ -111,12 +123,13 @@ def create_vm(body: VmCreate) -> dict:
             memory_mb,
             vcpus,
             disk_path,
+            network=network_name,
             seed_iso=seed_iso,
         )
     except CloudInitError as exc:
         _rollback(body.name, disk_path)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except BackendError as exc:
+    except (BackendError, NetworkError) as exc:
         _rollback(body.name, disk_path)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -130,6 +143,7 @@ def create_vm(body: VmCreate) -> dict:
     }
     vm["image_path"] = base
     vm["hostname"] = hostname
+    vm["network"] = network_name
     state.save_vm(vm)
     return vm
 

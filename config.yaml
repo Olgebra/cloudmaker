@@ -14,3 +14,9 @@ vm:
   vcpus: 1
   memory_mb: 512
   disk_gb: 4
+
+network:
+  name: cloudmaker
+  bridge: br-cloudmaker
+  cidr: 192.168.100.0/24
+  gateway: 192.168.100.1

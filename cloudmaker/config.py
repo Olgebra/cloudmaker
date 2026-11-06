@@ -27,10 +27,18 @@ class VmDefaults(BaseModel):
     disk_gb: int = 4
 
 
+class NetworkConfig(BaseModel):
+    name: str = "cloudmaker"
+    bridge: str = "br-cloudmaker"
+    cidr: str = "192.168.100.0/24"
+    gateway: str = "192.168.100.1"
+
+
 class Settings(BaseModel):
     libvirt: LibvirtConfig = Field(default_factory=LibvirtConfig)
     storage: StorageConfig = Field(default_factory=StorageConfig)
     vm: VmDefaults = Field(default_factory=VmDefaults)
+    network: NetworkConfig = Field(default_factory=NetworkConfig)
 
 
 def load_settings(path: str | None = None) -> Settings:
