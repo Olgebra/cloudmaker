@@ -44,6 +44,19 @@ ls -l /var/run/libvirt/libvirt-sock
 virsh -c qemu:///system list --all
 ```
 
+Если `virsh` пишет `Permission denied` на `/var/run/libvirt/libvirt-sock` —
+в **текущем** терминале ещё нет группы `libvirt` (после `usermod` нужен
+перелогин или `newgrp`):
+
+```bash
+groups                 # должна быть libvirt
+newgrp libvirt
+virsh -c qemu:///system list --all
+```
+
+`uvicorn` тоже запускайте из терминала, где `groups` уже показывает `libvirt`,
+иначе API получит ту же ошибку доступа к сокету.
+
 ## Установка
 
 ```bash
