@@ -105,4 +105,4 @@ def build_seed_iso(
     )
     if not iso.is_file():
         raise BackendError("seed ISO не создан: " + str(iso))
-    return iso
+    return iso.resolve()

@@ -94,7 +94,8 @@ class LibvirtBackend:
         network: str = "default",
         seed_iso: Path | None = None,
     ) -> str:
-        disk = escape(str(disk_path))
+        # libvirt/qemu ищут файлы от своих cwd — только абсолютные пути
+        disk = escape(str(Path(disk_path).resolve()))
         vm = escape(name)
         nic_network = escape(network or "default")
         lines = [
@@ -122,7 +123,7 @@ class LibvirtBackend:
             '    </disk>',
         ]
         if seed_iso is not None:
-            iso = escape(str(seed_iso))
+            iso = escape(str(Path(seed_iso).resolve()))
             lines.extend(
                 [
                     "    <disk type='file' device='cdrom'>",
