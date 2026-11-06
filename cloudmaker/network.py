@@ -22,21 +22,79 @@ def _prefix(cidr: str) -> str:
     return prefix
 
 
-def ensure_host_bridge(bridge: str, gateway: str, cidr: str) -> None:
-    """Создать linux-мост на хосте и назначить адрес шлюза."""
-    show = subprocess.run(
-        ["ip", "link", "show", bridge],
+def _bridge_exists(bridge: str) -> bool:
+    result = subprocess.run(
+        ["ip", "link", "show", "dev", bridge],
         capture_output=True,
         text=True,
         check=False,
     )
+    return result.returncode == 0
+
+
+def _bridge_is_up(bridge: str) -> bool:
+    result = subprocess.run(
+        ["ip", "-o", "link", "show", "dev", bridge],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return False
+    # пример: 42: br-cloudmaker: <BROADCAST,MULTICAST,UP,LOWER_UP> ...
+    flags = result.stdout.upper().split("<", 1)[-1].split(">", 1)[0]
+    return "UP" in flags.split(",")
+
+
+def _bridge_has_addr(bridge: str, addr: str) -> bool:
+    result = subprocess.run(
+        ["ip", "-o", "addr", "show", "dev", bridge],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return False
+    return addr in result.stdout
+
+
+def ensure_host_bridge(bridge: str, gateway: str, cidr: str) -> None:
+    """Создать linux-мост на хосте и назначить адрес шлюза.
+
+    Если мост уже поднят и адрес уже назначен (например после sudo),
+    повторные вызовы ip не выполняются — это позволяет работать API без root.
+    """
+    wanted = gateway + "/" + _prefix(cidr)
+    if (
+        _bridge_exists(bridge)
+        and _bridge_is_up(bridge)
+        and _bridge_has_addr(bridge, wanted)
+    ):
+        return
+
+    hint = (
+        "Нет прав на настройку моста. Один раз выполните от root: "
+        "sudo ip link add "
+        + bridge
+        + " type bridge; sudo ip link set "
+        + bridge
+        + " up; sudo ip addr replace "
+        + wanted
+        + " dev "
+        + bridge
+    )
     try:
-        if show.returncode != 0:
+        if not _bridge_exists(bridge):
             run_cmd(["ip", "link", "add", bridge, "type", "bridge"])
-        run_cmd(["ip", "link", "set", bridge, "up"])
-        run_cmd(["ip", "addr", "replace", gateway + "/" + _prefix(cidr), "dev", bridge])
+        if not _bridge_is_up(bridge):
+            run_cmd(["ip", "link", "set", bridge, "up"])
+        if not _bridge_has_addr(bridge, wanted):
+            run_cmd(["ip", "addr", "replace", wanted, "dev", bridge])
     except BackendError as exc:
-        raise NetworkError(str(exc)) from exc
+        detail = str(exc)
+        if "Operation not permitted" in detail or "Permission denied" in detail:
+            raise NetworkError(hint) from exc
+        raise NetworkError(detail) from exc
 
 
 def _net_dumpxml(uri: str, name: str) -> str | None:
