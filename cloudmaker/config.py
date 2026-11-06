@@ -29,7 +29,7 @@ class VmDefaults(BaseModel):
 
 class NetworkConfig(BaseModel):
     name: str = "cloudmaker"
-    bridge: str = "br-cloudmaker-typo"
+    bridge: str = "br-cloudmaker"
     cidr: str = "192.168.100.0/24"
     gateway: str = "192.168.100.1"
 

@@ -43,6 +43,7 @@ class VmCreate(BaseModel):
         default=None,
         description="Дополнительный cloud-config или скрипт user-data",
     )
+    network: str | None = Field(default=None, description="Имя виртуальной сети libvirt")
 
 
 def _sizes(body: VmCreate) -> tuple[int, int, int]:
@@ -95,7 +96,7 @@ def create_vm(body: VmCreate) -> dict:
         render_user_data(hostname, body.ssh_key, body.user_data)
     except CloudInitError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    network_name = settings.network.name
+    network_name = body.network or settings.network.name
     if not NAME_RE.match(network_name):
         raise HTTPException(status_code=400, detail="Некорректное имя сети")
     base = body.image_path or None
@@ -175,4 +176,18 @@ def delete_vm(name: str) -> dict:
     _remove_seed(name)
     state.delete_vm(name)
     return {"deleted": name}
+
+
+@router.get("/networks")
+def list_networks() -> dict:
+    return {
+        "networks": [
+            {
+                "name": settings.network.name,
+                "bridge": settings.network.bridge,
+                "cidr": settings.network.cidr,
+                "gateway": settings.network.gateway,
+            }
+        ]
+    }
 
