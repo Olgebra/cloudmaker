@@ -34,11 +34,17 @@ class NetworkConfig(BaseModel):
     gateway: str = "192.168.100.1"
 
 
+class QuotaConfig(BaseModel):
+    max_vcpus: int = 4
+    max_memory_mb: int = 4096
+
+
 class Settings(BaseModel):
     libvirt: LibvirtConfig = Field(default_factory=LibvirtConfig)
     storage: StorageConfig = Field(default_factory=StorageConfig)
     vm: VmDefaults = Field(default_factory=VmDefaults)
     network: NetworkConfig = Field(default_factory=NetworkConfig)
+    quotas: QuotaConfig = Field(default_factory=QuotaConfig)
 
 
 def load_settings(path: str | None = None) -> Settings:

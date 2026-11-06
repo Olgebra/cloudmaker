@@ -22,6 +22,7 @@ from cloudmaker.images import (
     list_images,
     register_image,
 )
+from cloudmaker.quotas import QuotaError, assert_within_quota
 
 NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]{0,31}$")
 HOSTNAME_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$")
@@ -100,6 +101,15 @@ def create_vm(body: VmCreate) -> dict:
         raise HTTPException(status_code=409, detail="ВМ уже существует")
 
     vcpus, memory_mb, disk_gb = _sizes(body)
+    try:
+        assert_within_quota(
+            vcpus,
+            memory_mb,
+            settings.quotas.max_vcpus,
+            settings.quotas.max_memory_mb,
+        )
+    except QuotaError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     hostname = body.hostname or body.name
     if not HOSTNAME_RE.match(hostname):
         raise HTTPException(status_code=400, detail="Некорректное имя хоста")

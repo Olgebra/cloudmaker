@@ -21,3 +21,8 @@ network:
   bridge: br-cloudmaker
   cidr: 192.168.100.0/24
   gateway: 192.168.100.1
+
+quotas:
+  # Потолок на одну ВМ. Больше — HTTP 400.
+  max_vcpus: 4
+  max_memory_mb: 4096
